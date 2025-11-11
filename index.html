@@ -1,16 +1,130 @@
 <!DOCTYPE html>
-<title>claimgame</title>
+<title>The Claim Game</title>
+
+<style>
+html, body {
+	margin: 0;
+	width: 100vw;
+	height: 100vh;
+	display: flex;
+}
+
+aside {
+	margin: 0;
+	border: 0;
+	border-right: 1px solid lightgrey;
+	padding: 0.25rem;
+}
+
+main {
+	flex: 1;
+	display: grid;
+    overflow: auto;
+}
+
+pre, textarea {
+	grid-area: 1 / 1 / 1 / 1;
+	background: transparent;
+	margin: 0.125rem;
+	border: 0;
+	padding: 0.125rem;
+	font: 1rem monospace;
+    overflow: clip;
+    text-wrap: wrap;
+}
+
+pre, mark {
+    color: transparent; background: transparent;
+}
+
+label, input {
+	font: 1rem monospace;
+}
+
+mark { border-radius: 0.25rem; }
+
+.error { background: red; }
+.independent { background: yellow; }
+.pseudoindependent { background: lightblue; }
+.dependent { background: lightgrey; }
+.ignore { color:black; text-decoration: line-through;; /*background: grey; border-radius: 0; */}
+.append { background: lightgrey; }
+</style>
+
+<aside>
+<label><input type=checkbox id=claims_chk checked>claims</label>
+</aside>
+
+<main>
+<pre id=claims_pre></pre>
+<textarea id=plaintext></textarea>
+</main>
+
+<script>
+"use script";
+
+const claims_chk = document.getElementById("claims_chk");
+const claims_pre = document.getElementById("claims_pre");
+const plaintext = document.getElementById("plaintext");
+
+claims_chk.addEventListener("change", update_claims);
+plaintext.addEventListener("input", update_claims);
 
 
-<p>
-gsdf
+function update_claims() {
+    claims_pre.innerHTML = plaintext.value + "\n";
 
-dsfdsf
-dsf
-gsdf
-d
-fg
+    if (claims_chk.checked) {
+	const m = markup_claims(plaintext.value);
+        claims_pre.innerHTML = m + "\n";
+    }
+}
 
-<p>Hopefully his works
 
+
+function markup_claims(string) {
+    const regex = /^([\t \d]*?)(\d+)\.([\t ]*)(([a-z]+).*?\.)([\t ]*)$/gimsu;
+    let last_claim_number = 0;
+
+    function replacer(match, m1, number, m3, body, first, m6) {
+        const curr_claim_number = Number(number);
+        const type =
+            curr_claim_number !== last_claim_number + 1 ? "error" :
+            /claim/i.test(body) === false ? "independent" :
+            /the/i.test(first) === false ? "pseudoindependent" :
+            "dependent";
+
+	const sbody = markup_body(curr_claim_number, body);
+
+        last_claim_number = curr_claim_number;
+
+        return `</mark>${m1}<mark class=${type} id=claim${number}>${number}.</mark>${m3}${sbody}${m6}<mark class=ignore>`;
+    }
+
+    const str = "<mark class=ignore>" + string.replaceAll(regex, replacer) + "<\mark>";
+    return str;
+}
+
+
+
+function markup_body(curr_claim_number, body) {
+	const regex = /claim(ed|s)?(?:(?:[-\t /,]|to|and|or)*\d+)*/gisu
+
+	function replacer(all) {
+		const nums = [...all.matchAll(/\d+/g)];
+
+		if (nums.some(e => Number(e) >= Number(curr_claim_number) )) {
+			return "<mark class=error>" + all + "</mark>"			;
+		}
+
+		return "<mark class=append>" + all + "</mark>";
+	}
+
+	return body.replaceAll(regex, replacer);
+}
+
+
+
+update_claims();
+</script>
 
