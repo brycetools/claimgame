@@ -1,121 +1,142 @@
 <!DOCTYPE html>
-<title>Extractor 5</title>
+<title>The Claim Game</title>
 
-<textarea id=trn_ta cols=80 rows=24 placeholder="Paste STN transcript here"></textarea>
-<textarea id=patents_ta cols=18 rows=24 placeholder="Patents"></textarea>
-<textarea id=medline_ta cols=18 rows=24 placeholder="Medline"></textarea>
-<textarea id=embase_ta cols=18 rows=24 placeholder="Embase (SUBSET!)"></textarea>
-<textarea id=wpids_ta cols=18 rows=24 placeholder="WPIDS"></textarea>
+<style>
+html, body {
+	margin: 0;
+	width: 100vw;
+	height: 100vh;
+	display: flex;
+}
+
+aside {
+	margin: 0;
+	border: 0;
+	border-right: 1px solid lightgrey;
+	padding: 0.25rem;
+}
+
+main {
+	flex: 1;
+	display: grid;
+    overflow: auto;
+}
+
+pre, textarea {
+	grid-area: 1 / 1 / 1 / 1;
+	background: transparent;
+	margin: 0.125rem;
+	border: 0;
+	padding: 0.125rem;
+	font: 1rem monospace;
+    overflow: clip;
+    text-wrap: wrap;
+}
+
+pre, mark {
+    color: transparent; background: transparent;
+}
+
+label, input {
+	font: 1rem monospace;
+}
+
+mark { border-radius: 0.25rem; }
+
+.error { background: red; }
+.independent { background: yellow; }
+.pseudoindependent { background: lightblue; }
+.dependent { background: lightgrey; }
+.ignore { color:black; text-decoration: line-through;; /*background: grey; border-radius: 0; */}
+.append { background: #ad4; }
+</style>
+
+<aside>
+<label><input type=checkbox id=claims_chk checked>claims</label>
+</aside>
+
+<main>
+<pre id=claims_pre></pre>
+<textarea id=plaintext></textarea>
+</main>
 
 <script>
 "use strict";
 
+const claims_chk = document.getElementById("claims_chk");
+const claims_pre = document.getElementById("claims_pre");
+const plaintext = document.getElementById("plaintext");
 
-function extract_patents(string) {
-    const CAplus_PI_field = /^(?:PI|PIA|PN|PPPI|PSPI)? *([A-Z][A-Z]) *(\d+) *([A-Z]\d?)\b/gmu;
-        // Requires kind code, so that priority docs are ignored
-        // Also extracts WPIDS patents (PIA field)
+claims_chk.addEventListener("change", update_claims);
+plaintext.addEventListener("input", update_claims);
 
-    const Registry_CN_field = /PN: *([A-Z][A-Z]) *(\d+) *([A-Z]\d?)?\b/gu;
-    const Registry_PNTE_field = /\| *([A-Z][A-Z]) *(\d+) *([A-Z]\d?)?\b/gu;
 
-    const a = [...string.matchAll(CAplus_PI_field)].map(format);
-    const b = [...string.matchAll(Registry_CN_field)].map(format);
-    const c = [...string.matchAll(Registry_PNTE_field)].map(format);
+function update_claims() {
+    claims_pre.innerHTML = plaintext.value + "\n";
 
-    return [...new Set([...a, ...b, ...c])].sort();                                // Remove duplicates & sort (for human readability)
+    if (claims_chk.checked) {
+	const m = markup_claims(plaintext.value);
+        claims_pre.innerHTML = m + "\n";
+    }
 }
 
 
-function extract_medline(string) {
-    const regex = /PubMed ID: (\d+)/g;
-    return [...string.matchAll(regex)].map(e => "NLM" + e[1]);
-}
 
+function markup_claims(string) {
+    const regex = /^([\t \d]*?)(\d+)\.([\t ]*)(([a-z]+).*?\.)([\t ]*)$/gimsu;
+    let last_claim_number = 0;
 
-function extract_embase_pmid(string) {
-    const regex = /PMID: (\d+)/g;
-    return [...string.matchAll(regex)].map(e => "NLM" + e[1]);
-}
+    function replacer(match, m1, number, m3, body, first, m6) {
+        const curr_claim_number = Number(number);
+        const type =
+            curr_claim_number !== last_claim_number + 1 ? "error" :
+            /claim/i.test(body) === false ? "independent" :
+            /the/i.test(first) === false ? "pseudoindependent" :
+            "dependent";
 
+	    body = markup_body(curr_claim_number, body);
+        body = remove_AU_datestamp(body);
 
-function extract_wpids(string) {
-    const regex = /^AN *([A-Z\d]+\-[A-Z\d]+).*?WPIDS/gm;
-    return [...string.matchAll(regex)].map(e => '"' + e[1] + '"').sort();
-}
+        last_claim_number = curr_claim_number;
 
-
-const trn_ta = document.getElementById("trn_ta");
-const patents_ta = document.getElementById("patents_ta");
-const medline_ta = document.getElementById("medline_ta");
-const embase_ta = document.getElementById("embase_ta");
-const wpids_ta = document.getElementById("wpids_ta");
-
-
-trn_ta.addEventListener("input", function () {
-    const str = trn_ta.value;
-    patents_ta.value = "(\n" + extract_patents(str).join(",\n") + "\n)/pn";
-    medline_ta.value = "(\n" + extract_medline(str).join(",\n") + "\n)/an@npl";
-    embase_ta.value = "(\n" + extract_embase_pmid(str).join(",\n") + "\n)/an@npl";
-    wpids_ta.value = "(\n" + extract_wpids(str).join(",\n") + "\n)/an@wpi";
-});
-
-
-function US(cc, num, kind) {
-    if (kind !== undefined && kind[0] === "A" && num.length === 11) {
-        return cc + num.slice(0, 4) + num.slice(-6);         // US YYYY 0 NNNNNN A1 ; Remove the zero
+        return `</mark>${m1}<mark class=${type} id=claim${number}>${number}.</mark>${m3}${body}${m6}<mark class=ignore>`;
     }
 
-    return cc + num + (kind ?? "");
+    const str = "<mark class=ignore>" + string.replaceAll(regex, replacer) + "<\mark>";
+    return str;
 }
 
 
-function KR(cc, num, kind) {
-    if (kind !== undefined && kind[0] === "A") {
-        return cc + num.slice(0, 4) + "0" + num.slice(4);    // KR YYYY _ NNNNNN A ; Add "leading" zero
-    }
 
-    return cc + num + (kind ?? "");
+function markup_body(curr_claim_number, body) {
+	const regex = /claim(ed|s)?(?:(?:[-\t /,]|to|and|or)*\d+)*/gisu
+
+	function replacer(all) {
+		const nums = [...all.matchAll(/\d+/g)];
+
+		if (nums.some(e => Number(e) >= Number(curr_claim_number) )) {
+			return "<mark class=error>" + all + "</mark>"			;
+		}
+
+		return "<mark class=append>" + all + "</mark>";
+	}
+
+	return body.replaceAll(regex, replacer);
 }
 
 
-function JP(cc, num, kind) {
-    if (kind !== undefined && kind[0] === "A") {
-        if (num.length === 10) {                             // Applications post 2000 ; JP YYYY NNNNNN A
-            return cc + num + kind;
-        }
 
-        return cc + "[S,H,]" + num + kind;                   // Older JP applications using year of emperor
-    }
-
-    return cc + num;                                         // JP YYYY NNNNNN T ; JP NNNNNNN B2
-}
-
-
-function ZA(cc, num, kind) {
-    const re = /(\d\d\d\d)0(\d+)/;
-    const match = re.exec(num);
-
-    if (match === null) {
-        return cc + num;
-    }
-
-    return cc + match[1] + match[2];
-}
  
 
-const formatters = { JP, KR, US, ZA };
+ 
 
+ 
 
-function format(match) {
-    const [all, cc, num, kind] = match;
-
-    if (formatters[cc] !== undefined) {
-        return formatters[cc](cc, num, kind);
-    }
-
-    return cc + num;
+function remove_AU_datestamp(string) {
+    const regex = /\b\d{10} +\d{2} +(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) +\d{4}\b(\n *\d+ *\n)?/gu;
+    return string.replaceAll(regex, e => `<mark class=ignore>${e}</mark>`);
 }
 
-
+update_claims();
 </script>
+
