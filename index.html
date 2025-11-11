@@ -96,6 +96,7 @@ function markup_claims(string) {
 
 	    body = markup_body(curr_claim_number, body);
         body = remove_AU_datestamp(body);
+        body = remove_WO_datestamp(body);
 
         last_claim_number = curr_claim_number;
 
@@ -128,6 +129,10 @@ function markup_body(curr_claim_number, body) {
 
  
 
+function remove_WO_datestamp(string) {
+    const regex = /\n *WO *\d{4}\/\d{6} *PCT\/[A-Z]{2}\d{4}\/\d{6} *\n/gu;
+    return string.replaceAll(regex, e => `<mark class=ignore>${e}</mark>`);
+}
  
 
  
