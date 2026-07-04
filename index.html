@@ -1,82 +1,220 @@
 <!DOCTYPE html>
-<title>The Claim Game</title>
+<title>claimgame</title>
 
 <style>
-html, body {
-	margin: 0;
-	width: 100vw;
-	height: 100vh;
-	display: flex;
+*, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    font: 1rem monospace;
 }
 
-aside {
-	margin: 0;
-	border: 0;
-	border-right: 1px solid lightgrey;
-	padding: 0.25rem;
+body {
+    height: 100vh;
+    display: flex;
+}
+
+search {
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    border-right: 1px solid lightgrey;
+    overflow: auto;
 }
 
 main {
-	flex: 1;
-	display: grid;
+    flex: 1;
+    border-left: 1px solid lightgrey;
+    padding: 4px;
+    display: grid;
     overflow: auto;
 }
 
 pre, textarea {
-	grid-area: 1 / 1 / 1 / 1;
-	background: transparent;
-	margin: 0.125rem;
-	border: 0;
-	padding: 0.125rem;
-	font: 1rem monospace;
+    grid-area: 1 / 1;
+    border: 0;
+    padding: 4px;
+    background: transparent;
+    font: 1rem monospace;
     overflow: clip;
     text-wrap: wrap;
+    line-height: 1.5;
 }
 
-pre, mark {
-    color: transparent; background: transparent;
+pre {
+    color: transparent;
 }
 
-label, input {
-	font: 1rem monospace;
+textarea {
+    resize: none;
+    color: transparent;
+    caret-color: black;
 }
 
-mark { border-radius: 0.25rem; }
+#mirror {
+    color: black;
+}
 
-.error { background: red; }
-.independent { background: yellow; }
-.pseudoindependent { background: lightblue; }
-.dependent { background: lightgrey; }
-.ignore { color:black; text-decoration: line-through;; /*background: grey; border-radius: 0; */}
-.append { background: #ad4; }
+p {
+    max-width: 20rem;
+}
+
+span {
+}
+
+#claimgame-nav{
+display:flex;
+flex-direction:column;
+
+
+}
+/*
+mark{    border-radius: 0.25rem;}
+a{    border-radius: 0.25rem;}
+*/
+
+
+.claim { display:inline-block;
+background: linear-gradient(
+  #fff,
+  #fff 2px,
+  #eeeeee 2px,
+  #eeeeee 100%
+);
+
+ color:black;      /*border-radius: 0.5rem;*/  line-height: 1.5;}
+
+mark.claim{background:transparent;}
+.error { background:
+linear-gradient(
+  #fff,
+  #fff 2px,
+  #f99 2px,
+  #f99 100%
+);
+ }
+
+.independent { background: linear-gradient(
+  #fff,
+  #fff 2px,
+  #ff9 2px,
+  #ff9 100%
+); }
+
+.pseudoindependent { background: linear-gradient(
+  #fff,
+  #fff 2px,
+  #9ff 2px,
+  #9ff 100%
+); }
+
+/*.dependent { background: lightgrey; }*/
+
+
+.ignore { background: white;}
+.append { background: #9f9; }
+mark.error {background: #f33; }
 </style>
 
-<aside>
-<label><input type=checkbox id=claims_chk checked>claims</label>
-</aside>
+<search>
+
+<div>
+<input type=checkbox id=claimgame-chk checked>
+<label>claimgame</label>
+</div>
+
+
+<!--
+<div>
+<input type=checkbox id=patents-chk checked>
+<label>patents</label>
+<button id=patents-btn>copy patents to clipboard</button>
+</div>
+
+<div>
+<input type=checkbox id=medline-chk checked>
+<label>medline</label>
+<button id=medline-btn>copy medline to clipboard</button>
+</div>
+
+<div style=flex:1></div>
+
+<p>
+Paste STN transcript into the box.
+
+<p>
+Press the button to copy patent numbers or medline accession numbers to the clipboard. These can be directly pasted into Abs.
+
+<p>
+Extracting patents should get patent numbers from WPIDS answers, so there is no need to extact WPIDS accession numbers separately.
+But if you really want WPIDS accession numbers, use <button id=derwent-btn>this button</button>.
+
+<p>
+You don't need to use the checkboxes for anything, they are just there to highlight what parts of the transcript were extracted, for your own amusement.
+
+<p>
+Works for AU, CN, EP, JP, KR, US and WO patents.
+Everything else is just a best guess.
+We take all care but no responsibility.
+
+<div style=flex:1></div>
+
+<a href="https://brycetools.github.io/extractor/old.html">Old Extractor</a>
+-->
+<div style=flex:1></div>
+<a href="https://brycetools.github.io/claimgame/old.html">Old Claimgame</a>
+<div style=flex:1></div>
+
+<p>
+&copy; 2026 Andrew Bryce
+<br>
+All rights reserved
+
+</search>
+
+<nav id=claimgame-nav>claims</nav>
 
 <main>
-<pre id=claims_pre></pre>
-<textarea id=plaintext></textarea>
+<pre id=mirror></pre>
+<pre id=claimgame-pre></pre>
+<pre id=patents-pre></pre>
+<pre id=medline-pre></pre>
+<textarea id=source autofocus placeholder="Paste STN transcript here"></textarea>
 </main>
+
+
 
 <script>
 "use strict";
 
-const claims_chk = document.getElementById("claims_chk");
-const claims_pre = document.getElementById("claims_pre");
-const plaintext = document.getElementById("plaintext");
+
+
+const source = document.getElementById("source");
+const mirror = document.getElementById("mirror");
+
+source.value = "";
+
+
+
+const claims_chk = document.getElementById("claimgame-chk");
+const claims_pre = document.getElementById("claimgame-pre");
+const claims_nav = document.getElementById("claimgame-nav");
 
 claims_chk.addEventListener("change", update_claims);
-plaintext.addEventListener("input", update_claims);
+source.addEventListener("input", update_claims);
+
 
 
 function update_claims() {
-    claims_pre.innerHTML = plaintext.value + "\n";
+    claims_pre.innerHTML = "";
+    claims_nav.innerHTML = "claims";
+
 
     if (claims_chk.checked) {
-	const m = markup_claims(plaintext.value);
+        const j = markup_claims(escape(source.value));
+        const m = j.markup;
         claims_pre.innerHTML = m + "\n";
+        claims_nav.innerHTML = "claims\n" + j.summary.join("");
     }
 }
 
@@ -84,64 +222,325 @@ function update_claims() {
 
 function markup_claims(string) {
     const regex = /^([\t \d]*?)(\d+)\.([\t ]*)(([a-z]+).*?\.)([\t ]*)$/gimsu;
+    let claimset = 0;
     let last_claim_number = 0;
+    let summary = [];
 
     function replacer(match, m1, number, m3, body, first, m6) {
         const curr_claim_number = Number(number);
-        const type =
+        if (curr_claim_number === 1) {claimset += 1;}
+        let type =
             curr_claim_number !== last_claim_number + 1 ? "error" :
             /claim/i.test(body) === false ? "independent" :
             /the/i.test(first) === false ? "pseudoindependent" :
             "dependent";
 
-	    body = markup_body(curr_claim_number, body);
-        body = remove_AU_datestamp(body);
-        body = remove_WO_datestamp(body);
+        const claim_id = `claimset${claimset}-claimnum${number}`
+
+	    const zzz = markup_body(curr_claim_number, body);
+         const m_body = zzz[0];
+       let e = zzz[1];
+if(e){type="error"}
+
+        if (type !== "dependent") {
+            summary.push(`<a href=#${claim_id} class=${type}>${number}.</a>`);
+        }
+
+
 
         last_claim_number = curr_claim_number;
 
-        return `</mark>${m1}<mark class=${type} id=claim${number}>${number}.</mark>${m3}${body}${m6}<mark class=ignore>`;
+        return `<span class='claim ${type}'><span class=ignore>${m1}</span><mark class='claim ${type}' id=${claim_id}>${number}.</mark>${m3}${m_body}${m6}</span>`;
+
+
     }
 
-    const str = "<mark class=ignore>" + string.replaceAll(regex, replacer) + "<\mark>";
-    return str;
+    const markup = string.replaceAll(regex, replacer);
+
+    return {markup,summary};
 }
 
 
 
 function markup_body(curr_claim_number, body) {
-	const regex = /claim(ed|s)?(?:(?:[-\t /,]|to|and|or)*\d+)*/gisu
+	const regex = /claims?(?:(?:[-—\r\n\t /,‒‐–‑]|to|and|or)*\d+)*/gisu
+    let e = false;
 
 	function replacer(all) {
 		const nums = [...all.matchAll(/\d+/g)];
 
 		if (nums.some(e => Number(e) >= Number(curr_claim_number) )) {
+            e = true;
 			return "<mark class=error>" + all + "</mark>"			;
 		}
 
 		return "<mark class=append>" + all + "</mark>";
 	}
 
-	return body.replaceAll(regex, replacer);
+	return [body.replaceAll(regex, replacer),e];
 }
 
 
 
- 
 
-function remove_WO_datestamp(string) {
-    const regex = /\n *WO *\d{4}\/\d{6} *PCT\/[A-Z]{2}\d{4}\/\d{6} *\n/gu;
-    return string.replaceAll(regex, e => `<mark class=ignore>${e}</mark>`);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+source.addEventListener("input", () => mirror.innerHTML = escape(source.value) + "\n");
+
+
+
+function escape(html) {
+    return html.replaceAll("&", "&amp;").replaceAll("<", "&lt;");
 }
- 
 
- 
 
-function remove_AU_datestamp(string) {
-    const regex = /\b\d{10} +\d{2} +(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) +\d{4}\b(\n *\d+ *\n)?/gu;
-    return string.replaceAll(regex, e => `<mark class=ignore>${e}</mark>`);
+document.getElementById("derwent-btn").addEventListener("click", () => {
+    const regex = /^AN *([A-Z\d]+\-[A-Z\d]+).*?WPIDS/gm;
+    const string = escape(source.value);
+    const c = [...string.matchAll(regex)].map(e => '"' + e[1] + '"').sort();
+    navigator.clipboard.writeText("(" + c.join(",") + ")/an@wpi");
+});
+
+
+
+const medline_chk = document.getElementById("medline-chk");
+const medline_btn = document.getElementById("medline-btn");
+const medline_pre = document.getElementById("medline-pre");
+
+
+
+medline_chk.addEventListener("change", () => {
+    medline_pre.innerHTML = "";
+
+    if (medline_chk.checked) {
+        medline_pre.innerHTML =  markup_medline(escape(source.value));
+    }
+});
+
+
+
+medline_btn.addEventListener("click", () => {
+    const a = extract_medline(escape(source.value));
+    const b = [...new Set(a)];
+    const c = b.sort();
+    navigator.clipboard.writeText(`(${c.join(",")})/an`);
+});
+
+
+
+source.addEventListener("input", () => {
+    medline_pre.innerHTML = "";
+
+    if (medline_chk.checked) {
+        medline_pre.innerHTML =  markup_medline(escape(source.value));
+    }
+});
+
+
+
+function markup_medline(input) {
+    const regex = /(?:PubMed ID|PMID): (\d+)/g;
+    return input.replaceAll(regex, m => `<mark>${m}</mark>`);
 }
 
-update_claims();
+
+
+function extract_medline(input) {
+    const regex = /(?:PubMed ID|PMID): (\d+)/g;
+    return [...input.matchAll(regex)].map(m => "NLM" + m[1]);
+}
+
+
+
+const patents_chk = document.getElementById("patents-chk");
+const patents_btn = document.getElementById("patents-btn");
+const patents_pre = document.getElementById("patents-pre");
+
+
+
+const regex = /\b(?<!-)(AR|AT|AU|BR|CA|CN|DE|EP|ES|FI|FR|GB|HK|IL|IN|JP|KR|MX|NZ|PH|RU|SG|TH|TW|US|WO|ZA) *(\d{6,})(?: *([A-Z])(\d*))?\b/gsu
+
+
+
+patents_chk.addEventListener("change", () => {
+    patents_pre.innerHTML = "";
+
+    if (patents_chk.checked) {
+        patents_pre.innerHTML =  markup_patents(escape(source.value), regex);
+    }
+});
+
+
+
+patents_btn.addEventListener("click", () => {
+    const a = extract_patents(escape(source.value), regex);
+    const b = [...new Set(a)];
+    const c = b.sort();
+    navigator.clipboard.writeText(`(${c.join(",")})/pn`);
+});
+
+
+
+source.addEventListener("input", () => {
+    patents_pre.innerHTML = "";
+
+    if (patents_chk.checked) {
+        patents_pre.innerHTML =  markup_patents(escape(source.value), regex);
+    }
+});
+
+
+
+function markup_patents(input, regex) {
+    return input.replaceAll(regex, m => `<mark>${m}</mark>`);
+}
+
+
+
+function extract_patents(input, regex) {
+    return [...input.matchAll(regex)].map(m => format(m[1] ,m[2], m[3], m[4]));
+}
+
+
+
+function format(cc, num, kind, level) {
+    return (
+        cc === "WO" ? WO(cc, num, kind, level) :
+        cc === "US" ? US(cc, num, kind, level) :
+        cc === "JP" ? JP(cc, num, kind, level) :
+        cc === "KR" ? KR(cc, num, kind, level) :
+        cc === "AU" ? AU(cc, num, kind, level) :
+        cc === "ZA" ? ZA(cc, num, kind, level) :
+        cc + num
+    );
+}
+
+
+
+function WO(cc, num, kind, level) {
+    if (num.length === 10) {
+        if (Number(num) < 2002051235) {
+            return cc + num.slice(2, 4) + num.slice(-5);
+        }
+
+        if (Number(num) < 2004000001) {
+            return cc + num.slice(2, 4) + num.slice(-6);
+        }
+    }
+
+    return cc + num;
+}
+
+
+
+function US(cc, num, kind, level) {
+    if (num.length === 11) {
+        return cc + num.slice(0, 4) + num.slice(-6);
+    }
+
+    if (num.length === 8 && num.startsWith("0")) {
+        return cc + num.slice(-7);
+    }
+
+    return cc + num;
+}
+
+
+
+function JP(cc, num, kind, level) {
+    if (num.length === 8) {
+        const year = num.slice(0,2);
+        const n = Number(num.slice(2));
+        const era = (Number(num) < 12000000 ? "H" : "S");
+        const k = (kind === undefined || kind === "T" ? "" : kind);
+        return cc + era + year + n + k;
+    }
+
+    return cc + num;
+}
+
+
+
+function AU(cc, num, kind, level) {
+    if (num.length === 10) {
+        if (num.startsWith("20000") || num.startsWith("20010")|| num.startsWith("20020")) {
+            const year = num.slice(2, 4);
+            const n = num.slice(5);
+            return "AU" + n + year;
+        }
+    }
+
+    if (num.length === 7) {
+        const year = num.slice(0,2);
+        const n = num.slice(2);
+        return cc + n + year;
+    }
+
+    return cc + num;
+}
+
+
+
+function KR(cc, num, kind, level) {
+    if (num.length === 10) {
+        const year = num.slice(0,4);
+        const n = num.slice(4);
+        return cc + year + "0" + n;
+    }
+    return cc + num;
+}
+
+
+
+function ZA(cc, num, kind, level) {
+    if (num.length === 10) {
+        const year = num.slice(0,4);
+        const n = num.slice(5);
+        return cc + year + n;
+    }
+
+    if (num.length === 7) {
+        const year = num.slice(0,2);
+        const n = num.slice(3);
+        return cc + year + Number(n);
+    }
+    return cc + num;
+}
+
 </script>
-
