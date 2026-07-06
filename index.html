@@ -224,7 +224,7 @@ function update_claims() {
 
 
 function markup_claims(string) {
-    const regex = /^([\s\d]*?)(\d+)\.(\s*)(([a-z]+).*?\.)([\t ]*)$/gimsu;
+    const regex = /^([\t \d]*?)(\d+)\.(\s*)(([a-z]+).*?\.)([\t ]*)$/gimsu;
     let claimset = 0;
     let last_claim_number = 0;
     let summary = [];
